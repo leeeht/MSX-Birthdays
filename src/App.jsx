@@ -98,7 +98,6 @@ function PasswordGate({ onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (password === PASSWORD) {
-      localStorage.setItem('msx-auth', 'true');
       onSuccess();
     } else {
       setError(true);
@@ -406,11 +405,6 @@ function BirthdayLookup() {
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const isAuth = localStorage.getItem('msx-auth') === 'true';
-    setAuthenticated(isAuth);
-  }, []);
 
   if (!authenticated) {
     return <PasswordGate onSuccess={() => setAuthenticated(true)} />;
