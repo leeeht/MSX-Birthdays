@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const PASSWORD = "nachois18";
+
 const birthdayData = [
   { lastName: "Zhao", firstName: "Jenny", birthdate: "2026-01-03" },
   { lastName: "Park", firstName: "Sehhoon", birthdate: "2026-01-09" },
@@ -89,7 +91,126 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 };
 
-export default function BirthdayLookup() {
+function PasswordGate({ onSuccess }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === PASSWORD) {
+      localStorage.setItem('msx-auth', 'true');
+      onSuccess();
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+      fontFamily: "'Crimson Pro', Georgia, serif",
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=Space+Mono&display=swap');
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-10px); }
+          75% { transform: translateX(10px); }
+        }
+      `}</style>
+
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '24px',
+        padding: '48px 40px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        textAlign: 'center',
+        maxWidth: '400px',
+        width: '100%'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+        <h1 style={{
+          color: '#ecf0f1',
+          fontSize: '24px',
+          fontWeight: '300',
+          letterSpacing: '2px',
+          marginBottom: '8px',
+          textTransform: 'uppercase'
+        }}>MSX'26 Only</h1>
+        <p style={{
+          color: '#8892a6',
+          fontSize: '14px',
+          fontFamily: "'Space Mono', monospace",
+          marginBottom: '32px'
+        }}>Enter the password to continue</p>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            style={{
+              width: '100%',
+              padding: '16px 20px',
+              fontSize: '18px',
+              fontFamily: "'Space Mono', monospace",
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: error ? '1px solid #e94560' : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              color: '#ecf0f1',
+              outline: 'none',
+              textAlign: 'center',
+              boxSizing: 'border-box',
+              animation: error ? 'shake 0.4s ease-out' : 'none'
+            }}
+          />
+          {error && (
+            <p style={{
+              color: '#e94560',
+              fontSize: '13px',
+              marginTop: '12px',
+              fontFamily: "'Space Mono', monospace"
+            }}>Wrong password, try again!</p>
+          )}
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              marginTop: '20px',
+              padding: '16px',
+              fontSize: '14px',
+              fontFamily: "'Space Mono', monospace",
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+              background: 'linear-gradient(135deg, #e94560 0%, #c73659 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#fff',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 20px rgba(233, 69, 96, 0.4)'
+            }}
+          >
+            Enter
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function BirthdayLookup() {
   const [searchName, setSearchName] = useState('');
   const [results, setResults] = useState([]);
 
@@ -125,7 +246,6 @@ export default function BirthdayLookup() {
         }
       `}</style>
 
-      {/* Decorative background */}
       <div style={{
         position: 'absolute',
         top: '-100px',
@@ -143,7 +263,6 @@ export default function BirthdayLookup() {
         position: 'relative',
         zIndex: 1
       }}>
-        {/* Header */}
         <div style={{
           textAlign: 'center',
           marginBottom: '48px',
@@ -166,7 +285,6 @@ export default function BirthdayLookup() {
           }}>GSB Class of 2026 • {birthdayData.length} classmates</p>
         </div>
 
-        {/* Search Card */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.03)',
           backdropFilter: 'blur(10px)',
@@ -214,7 +332,6 @@ export default function BirthdayLookup() {
             }}
           />
 
-          {/* Results */}
           {searchName.trim() && (
             <div style={{ marginTop: '24px' }}>
               {results.length > 0 ? (
@@ -271,7 +388,6 @@ export default function BirthdayLookup() {
             </div>
           )}
 
-          {/* Hint when empty */}
           {!searchName.trim() && (
             <p style={{
               marginTop: '16px',
@@ -286,4 +402,19 @@ export default function BirthdayLookup() {
       </div>
     </div>
   );
+}
+
+export default function App() {
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const isAuth = localStorage.getItem('msx-auth') === 'true';
+    setAuthenticated(isAuth);
+  }, []);
+
+  if (!authenticated) {
+    return <PasswordGate onSuccess={() => setAuthenticated(true)} />;
+  }
+
+  return <BirthdayLookup />;
 }
