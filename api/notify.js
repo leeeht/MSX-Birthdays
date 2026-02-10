@@ -1,5 +1,6 @@
 // This endpoint checks for today's birthdays and sends an email
 // Trigger this daily via cron-job.org
+// Test with: /api/notify?date=02-07
 
 const birthdayData = [
   { lastName: "Zhao", firstName: "Jenny", birthdate: "2026-01-03" },
@@ -107,10 +108,6 @@ function getTodaysBirthdays(testDate = null) {
 }
 
 function formatBirthdayEmail(birthdays) {
-  if (birthdays.length === 0) {
-    return null;
-  }
-
   const names = birthdays.map(p => `${p.firstName} ${p.lastName}`);
   
   const subject = birthdays.length === 1
@@ -143,21 +140,33 @@ function formatBirthdayEmail(birthdays) {
 }
 
 export default async function handler(req, res) {
-  const testDate = req.query.date || null;
-  
-  const { birthdays, dateUsed } = getTodaysBirthdays(testDate);
-  
-  if (birthdays.length === 0) {
-    return res.status(200).json({ 
-      message: 'No birthdays today', 
-      date: dateUsed,
-      testMode: !!testDate
-    });
-  }
-
-  const email = formatBirthdayEmail(birthdays);
-  
   try {
+    const testDate = req.query.date || null;
+    
+    // Check environment variables
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ 
+        error: 'Missing RESEND_API_KEY environment variable' 
+      });
+    }
+    if (!process.env.NOTIFICATION_EMAIL) {
+      return res.status(500).json({ 
+        error: 'Missing NOTIFICATION_EMAIL environment variable' 
+      });
+    }
+    
+    const { birthdays, dateUsed } = getTodaysBirthdays(testDate);
+    
+    if (birthdays.length === 0) {
+      return res.status(200).json({ 
+        message: 'No birthdays today', 
+        date: dateUsed,
+        testMode: !!testDate
+      });
+    }
+
+    const email = formatBirthdayEmail(birthdays);
+    
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -172,43 +181,35 @@ export default async function handler(req, res) {
       }),
     });
 
+    const responseText = await response.text();
+    
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error);
+      return res.status(500).json({ 
+        error: 'Resend API error', 
+        status: response.status,
+        details: responseText 
+      });
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      result = { raw: responseText };
+    }
     
     return res.status(200).json({ 
       message: 'Birthday email sent!',
       date: dateUsed,
       testMode: !!testDate,
       birthdays: email.names,
-      emailId: result.id
+      emailId: result.id || result
     });
   } catch (error) {
-    console.error('Email error:', error);
-    return res.status(500).json({ error: 'Failed to send email', details: error.message });
+    return res.status(500).json({ 
+      error: 'Server error', 
+      message: error.message,
+      stack: error.stack
+    });
   }
 }
-```
-
----
-
-## Steps:
-
-1. Go to GitHub → your repo → `api/notify.js`
-2. Click the **pencil icon** ✏️ to edit
-3. Select all (Ctrl+A / Cmd+A) → Delete
-4. Paste the code above
-5. Click **Commit changes**
-
-## Test URLs:
-
-After Vercel redeploys (~1 min):
-```
-https://msx-birthdays.vercel.app/api/notify?date=02-07
-```
-→ Sends email for Ann Li
-```
-https://msx-birthdays.vercel.app/api/notify?date=02-09
