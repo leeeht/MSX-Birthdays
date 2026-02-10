@@ -1,7 +1,5 @@
 // This endpoint checks for today's birthdays and sends an email
 // Trigger this daily via cron-job.org
-// This endpoint checks for today's birthdays and sends an email
-// Trigger this daily via cron-job.org
 
 const birthdayData = [
   { lastName: "Zhao", firstName: "Jenny", birthdate: "2026-01-03" },
@@ -87,16 +85,25 @@ const birthdayData = [
   { lastName: "Hines", firstName: "Woody", birthdate: "2026-12-27" },
 ];
 
-function getTodaysBirthdays() {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const todayMMDD = `${month}-${day}`;
+function getTodaysBirthdays(testDate = null) {
+  let todayMMDD;
+  
+  if (testDate) {
+    todayMMDD = testDate;
+  } else {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    todayMMDD = `${month}-${day}`;
+  }
 
-  return birthdayData.filter(person => {
-    const birthdateMMDD = person.birthdate.slice(5);
-    return birthdateMMDD === todayMMDD;
-  });
+  return { 
+    birthdays: birthdayData.filter(person => {
+      const birthdateMMDD = person.birthdate.slice(5);
+      return birthdateMMDD === todayMMDD;
+    }),
+    dateUsed: todayMMDD
+  };
 }
 
 function formatBirthdayEmail(birthdays) {
@@ -136,12 +143,15 @@ function formatBirthdayEmail(birthdays) {
 }
 
 export default async function handler(req, res) {
-  const birthdays = getTodaysBirthdays();
+  const testDate = req.query.date || null;
+  
+  const { birthdays, dateUsed } = getTodaysBirthdays(testDate);
   
   if (birthdays.length === 0) {
     return res.status(200).json({ 
       message: 'No birthdays today', 
-      date: new Date().toISOString().slice(0, 10) 
+      date: dateUsed,
+      testMode: !!testDate
     });
   }
 
@@ -171,6 +181,8 @@ export default async function handler(req, res) {
     
     return res.status(200).json({ 
       message: 'Birthday email sent!',
+      date: dateUsed,
+      testMode: !!testDate,
       birthdays: email.names,
       emailId: result.id
     });
@@ -179,3 +191,24 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to send email', details: error.message });
   }
 }
+```
+
+---
+
+## Steps:
+
+1. Go to GitHub → your repo → `api/notify.js`
+2. Click the **pencil icon** ✏️ to edit
+3. Select all (Ctrl+A / Cmd+A) → Delete
+4. Paste the code above
+5. Click **Commit changes**
+
+## Test URLs:
+
+After Vercel redeploys (~1 min):
+```
+https://msx-birthdays.vercel.app/api/notify?date=02-07
+```
+→ Sends email for Ann Li
+```
+https://msx-birthdays.vercel.app/api/notify?date=02-09
